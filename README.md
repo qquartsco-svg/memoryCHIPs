@@ -4,11 +4,11 @@
 
 **뇌 메모리 로직(STM · LTM · Consolidation) → 실리콘 칩 준비도 스크리닝 엔진**
 
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-0.2.0-orange)
-![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)
-![CI](https://github.com/qquartsco-svg/memoryCHIPs/actions/workflows/ci.yml/badge.svg)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.2.0-orange)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)](memory_chip_readiness/tests/test_memory_chip.py)
+[![CI](https://github.com/qquartsco-svg/memoryCHIPs/actions/workflows/ci.yml/badge.svg)](https://github.com/qquartsco-svg/memoryCHIPs/actions)
 
 ---
 
@@ -295,7 +295,7 @@ Consolidation: merge_arbiter    →   Merge Priority Arbiter
           │  L07 Standard Interface [0.16] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ ← 최대 │
           │  L08 Cache Coherency    [0.10] ▓▓▓▓▓▓▓▓▓▓           │
           │  L09 Multi-Tenant       [0.08] ▓▓▓▓▓▓▓▓             │
-          │  L10 Ecosystem Compat   [0.08] ▓▓▓▓▓▓▓▓             │
+          │  L10 OS & Ecosystem     [0.08] ▓▓▓▓▓▓▓▓             │
           └─────────────────────────────────────────────────────┘
 ```
 
@@ -501,7 +501,9 @@ rpt = analyze_preset("Robot_Memory_SoC")
 bridge = rpt.chip_bridge
 print(bridge.npu_omega_hint)       # NPU와 결합 시 힌트 점수
 print(bridge.hbm_omega_hint)       # HBM 연동 시 힌트 점수
+print(bridge.hbf_omega_hint)       # HBF(고속 플래시) 연동 시 힌트 점수
 print(bridge.foundry_gate_status)  # "pass" or "pending"
+print(bridge.notes)                # 자동 생성 메모
 
 # Edge AI 시스템용 플랫 딕셔너리
 sig = rpt.to_edge_signal()
@@ -595,27 +597,27 @@ summary = rpt.to_summary_dict()  # JSON 직렬화 가능 딕셔너리
 
 | 프리셋 | 시나리오 | 예상 Ω_chip | 판정 |
 |---|---|---|---|
-| `FPGA_STM_Prototype` | STM 전용 FPGA 프로토타입 — 초기 검증 단계 | ~0.15 | concept_only |
-| `EdgeAI_Memory_Coprocessor` | 엣지 AI 메모리 코프로세서 (14nm, 양산 근접) | ~0.72 | silicon_candidate |
-| `Robot_Memory_SoC` | 로봇/안드로이드 메모리 SoC (7nm, 이상적 목표치) | ~0.80 | silicon_candidate |
-| `Concept_BrainChip` | 초기 콘셉트 뇌 칩 — 소프트웨어 로직만 존재 | ~0.08 | concept_only |
-| `Spaceship_MemoryUnit` | 우주선 탑재 메모리 (65nm, 극한 온도·방사선 환경) | ~0.50 | rtl_ready |
+| `FPGA_STM_Prototype` | STM 전용 FPGA 프로토타입 — 초기 검증 단계 | **0.29** | concept_only |
+| `EdgeAI_Memory_Coprocessor` | 엣지 AI 메모리 코프로세서 (14nm, 양산 근접) | **0.82** | silicon_candidate |
+| `Robot_Memory_SoC` | 로봇/안드로이드 메모리 SoC (7nm, 이상적 목표치) | **0.94** | tapeout_ready |
+| `Concept_BrainChip` | 초기 콘셉트 뇌 칩 — 소프트웨어 로직만 존재 | **0.17** | concept_only |
+| `Spaceship_MemoryUnit` | 우주선 탑재 메모리 (65nm, 극한 온도·방사선 환경) | **0.78** | silicon_candidate |
 
-> `Robot_Memory_SoC`의 ~0.80은 모든 파라미터가 이상적으로 설정된 **목표 벤치마크**다.
-> 실제 로봇 SoC 프로젝트 초기 점수는 0.15~0.30 수준이다.
+> `Robot_Memory_SoC`의 0.94는 모든 파라미터가 이상적으로 설정된 **목표 벤치마크**다.
+> 실제 로봇 SoC 프로젝트 초기 점수는 0.15–0.30 수준이다.
 
 ### General-Purpose Tier — 범용 메모리 (2종)
 
 | 프리셋 | 시나리오 | 예상 Ω_chip | 판정 |
 |---|---|---|---|
-| `GP_DDR5_Compatible` | DDR5 JEDEC 표준 호환 범용 메모리 | ~0.75 | silicon_candidate |
-| `GP_CXL_Datacenter` | CXL 3.0 데이터센터 메모리 확장 모듈 | ~0.65 | rtl_ready |
+| `GP_DDR5_Compatible` | DDR5 JEDEC 표준 호환 범용 메모리 | **0.88** | tapeout_ready |
+| `GP_CXL_Datacenter` | CXL 3.0 데이터센터 메모리 확장 모듈 | **0.89** | tapeout_ready |
 
 ### Hybrid Tier — 혼합형 (1종)
 
 | 프리셋 | 시나리오 | 예상 Ω_chip | 판정 |
 |---|---|---|---|
-| `Hybrid_SmartMemory_Module` | STM 정책 엔진 + DDR5 인터페이스 혼합 모듈 | ~0.60 | rtl_ready |
+| `Hybrid_SmartMemory_Module` | STM 정책 엔진 + DDR5 인터페이스 혼합 모듈 | **0.84** | silicon_candidate |
 
 모든 프리셋은 **가상 시나리오**이며 실제 특정 칩 제품과 무관하다.
 

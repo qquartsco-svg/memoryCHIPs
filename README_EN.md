@@ -4,11 +4,11 @@
 
 **Brain Memory Logic (STM · LTM · Consolidation) → Silicon Chip Readiness Screening Engine**
 
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-0.2.0-orange)
-![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)
-![CI](https://github.com/qquartsco-svg/memoryCHIPs/actions/workflows/ci.yml/badge.svg)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.2.0-orange)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)](memory_chip_readiness/tests/test_memory_chip.py)
+[![CI](https://github.com/qquartsco-svg/memoryCHIPs/actions/workflows/ci.yml/badge.svg)](https://github.com/qquartsco-svg/memoryCHIPs/actions)
 
 ---
 
@@ -496,7 +496,9 @@ rpt = analyze_preset("Robot_Memory_SoC")
 bridge = rpt.chip_bridge
 print(bridge.npu_omega_hint)       # hint score when coupling with NPU
 print(bridge.hbm_omega_hint)       # hint score for HBM integration
+print(bridge.hbf_omega_hint)       # hint score for HBF (high-bandwidth flash) integration
 print(bridge.foundry_gate_status)  # "pass" or "pending"
+print(bridge.notes)                # auto-generated notes
 
 # Flat signal dict for edge AI systems
 sig = rpt.to_edge_signal()
@@ -590,27 +592,27 @@ summary = rpt.to_summary_dict()  # JSON-serializable dict
 
 | Preset | Scenario | Expected Ω | Verdict |
 |---|---|---|---|
-| `FPGA_STM_Prototype` | STM-only FPGA prototype — early validation | ~0.15 | concept_only |
-| `EdgeAI_Memory_Coprocessor` | Edge AI memory coprocessor (14nm, near production) | ~0.72 | silicon_candidate |
-| `Robot_Memory_SoC` | Robot/android memory SoC (7nm, idealized target) | ~0.80 | silicon_candidate |
-| `Concept_BrainChip` | Early concept brain chip — software logic only | ~0.08 | concept_only |
-| `Spaceship_MemoryUnit` | Spacecraft memory unit (65nm, extreme temp/radiation) | ~0.50 | rtl_ready |
+| `FPGA_STM_Prototype` | STM-only FPGA prototype — early validation | **0.29** | concept_only |
+| `EdgeAI_Memory_Coprocessor` | Edge AI memory coprocessor (14nm, near production) | **0.82** | silicon_candidate |
+| `Robot_Memory_SoC` | Robot/android memory SoC (7nm, idealized target) | **0.94** | tapeout_ready |
+| `Concept_BrainChip` | Early concept brain chip — software logic only | **0.17** | concept_only |
+| `Spaceship_MemoryUnit` | Spacecraft memory unit (65nm, extreme temp/radiation) | **0.78** | silicon_candidate |
 
-> `Robot_Memory_SoC`'s ~0.80 is a **target benchmark** with all parameters ideally set.
+> `Robot_Memory_SoC`'s **0.94** is a **target benchmark** with all parameters ideally set.
 > Real robot SoC projects typically start in the 0.15–0.30 range.
 
 ### General-Purpose Tier — Standard Memory (2 presets)
 
 | Preset | Scenario | Expected Ω | Verdict |
 |---|---|---|---|
-| `GP_DDR5_Compatible` | DDR5 JEDEC-compliant general-purpose memory | ~0.75 | silicon_candidate |
-| `GP_CXL_Datacenter` | CXL 3.0 datacenter memory expansion module | ~0.65 | rtl_ready |
+| `GP_DDR5_Compatible` | DDR5 JEDEC-compliant general-purpose memory | **0.88** | tapeout_ready |
+| `GP_CXL_Datacenter` | CXL 3.0 datacenter memory expansion module | **0.89** | tapeout_ready |
 
 ### Hybrid Tier — Mixed Design (1 preset)
 
 | Preset | Scenario | Expected Ω | Verdict |
 |---|---|---|---|
-| `Hybrid_SmartMemory_Module` | STM policy engine + DDR5 interface hybrid | ~0.60 | rtl_ready |
+| `Hybrid_SmartMemory_Module` | STM policy engine + DDR5 interface hybrid | **0.84** | silicon_candidate |
 
 All presets are **hypothetical scenarios** unrelated to any specific chip product.
 
