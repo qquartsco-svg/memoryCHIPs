@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "memory-chip-readiness"
+version = "0.2.0"
+description = "Memory Chip Readiness Foundation — STM/LTM/Consolidation 메모리 로직 → 실리콘 준비도 스크리닝 엔진"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "GNJz / 00_BRAIN"}]
+requires-python = ">=3.10"
+keywords = [
+    "memory", "chip", "silicon", "readiness", "stm", "ltm",
+    "consolidation", "asic", "fpga", "npu", "edge-ai",
+    "memory-accelerator", "coprocessor", "brain-chip",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.4"]
+
+[project.scripts]
+memory-chip-readiness = "memory_chip_readiness.cli:cli_main"
+
+[project.urls]
+Homepage = "https://github.com/qquartsco-svg/MemoryChip"
+Repository = "https://github.com/qquartsco-svg/MemoryChip"
+
+[tool.setuptools.packages.find]
+include = ["memory_chip_readiness*"]
+
+[tool.setuptools.package-data]
+memory_chip_readiness = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["memory_chip_readiness/tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
