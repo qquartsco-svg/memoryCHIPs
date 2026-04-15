@@ -24,6 +24,61 @@ class DesignTier(Enum):
     hybrid = "hybrid"
 
 
+class DesignPhase(str, Enum):
+    """현재 구현 성숙도 단계.
+
+    Ω_chip 점수는 입력 파라미터 기준 *목표/이상값*을 반영한다.
+    DesignPhase는 그 파라미터가 얼마나 현실화됐는지를 나타내며,
+    omega_context (현실 보정 점수)를 계산하는 데 쓰인다.
+
+    concept       : 소프트웨어 로직만 존재. RTL·PDK·검증 전무.
+    specification : 마이크로아키텍처 명세 작성 중. RTL 스켈레톤 없음.
+    prototype     : FPGA 프로토타입 존재. 일부 RTL 검증됨.
+    rtl_complete  : Verilog/VHDL 완성. 합성·시뮬레이션 진행 중.
+    production    : DRC/LVS Signoff 완료. 파운드리 테이프아웃 준비.
+    """
+
+    concept = "concept"
+    specification = "specification"
+    prototype = "prototype"
+    rtl_complete = "rtl_complete"
+    production = "production"
+
+
+# 각 단계의 '현실 반영 계수' — concept 단계의 이상적 점수는 30%만 현실로 신뢰
+_PHASE_REALISM: dict[DesignPhase, float] = {
+    DesignPhase.concept:        0.30,
+    DesignPhase.specification:  0.52,
+    DesignPhase.prototype:      0.72,
+    DesignPhase.rtl_complete:   0.90,
+    DesignPhase.production:     1.00,
+}
+
+_PHASE_NOTES: dict[DesignPhase, str] = {
+    DesignPhase.concept: (
+        "concept 단계: RTL·PDK·파운드리 계약이 전무하다. "
+        "omega_chip은 '이 설계 파라미터가 모두 달성되면' 얻을 이상값이며, "
+        "omega_context(=omega_chip×0.30)가 현재 현실에 가까운 추정치다."
+    ),
+    DesignPhase.specification: (
+        "specification 단계: 마이크로아키텍처 명세 존재, RTL 미착수. "
+        "omega_context = omega_chip × 0.52."
+    ),
+    DesignPhase.prototype: (
+        "prototype 단계: FPGA 프로토타입 존재, 일부 RTL 검증됨. "
+        "omega_context = omega_chip × 0.72."
+    ),
+    DesignPhase.rtl_complete: (
+        "rtl_complete 단계: 전체 RTL 완성, 합성·시뮬레이션 진행 중. "
+        "omega_context = omega_chip × 0.90."
+    ),
+    DesignPhase.production: (
+        "production 단계: Signoff 완료, 파운드리 테이프아웃 준비. "
+        "omega_context = omega_chip × 1.00."
+    ),
+}
+
+
 class ChipVerdict(Enum):
     """Ω_chip 기반 궤적 판정."""
 
@@ -356,13 +411,25 @@ class MemoryChipReadinessReport:
     # bridge
     chip_bridge: ChipBridgeSignal = field(default_factory=ChipBridgeSignal)
 
+    # design phase — 구현 성숙도
+    design_phase: DesignPhase = DesignPhase.concept
+    # omega_context: design_phase 현실 보정 점수 (omega_chip × phase_realism)
+    omega_context: float = 0.0
+    # gap_to_tapeout: tapeout_ready 임계(0.85)까지 남은 이상값 거리
+    gap_to_tapeout: float = 0.0
+    phase_note: str = ""
+
     def to_summary_dict(self) -> dict[str, Any]:
         """JSON-serialisable summary for dashboards & agents."""
         return {
             "design_tier": self.design_tier.value,
+            "design_phase": self.design_phase.value,
             "omega_chip": round(self.omega_chip, 4),
+            "omega_context": round(self.omega_context, 4),
+            "gap_to_tapeout": round(self.gap_to_tapeout, 4),
             "verdict": self.verdict.value,
             "key_bottleneck": self.key_bottleneck,
+            "phase_note": self.phase_note,
             "fabrication_gate": {
                 "ready": self.fabrication_gate.ready_for_tapeout,
                 "months": self.fabrication_gate.estimated_tapeout_months,
@@ -384,7 +451,10 @@ class MemoryChipReadinessReport:
         """경량 엣지/MCU/WASM 런타임용 flat signal."""
         sig: dict[str, float | bool | str] = {
             "design_tier": self.design_tier.value,
+            "design_phase": self.design_phase.value,
             "omega_chip": self.omega_chip,
+            "omega_context": self.omega_context,
+            "gap_to_tapeout": self.gap_to_tapeout,
             "verdict": self.verdict.value,
             "bottleneck": self.key_bottleneck,
             "gate_ready": self.fabrication_gate.ready_for_tapeout,

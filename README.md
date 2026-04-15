@@ -6,8 +6,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0-orange)](CHANGELOG.md)
-[![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)](memory_chip_readiness/tests/test_memory_chip.py)
+[![Version](https://img.shields.io/badge/version-0.3.0-orange)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-80%20passed-brightgreen)](memory_chip_readiness/tests/test_memory_chip.py)
 [![CI](https://github.com/qquartsco-svg/memoryCHIPs/actions/workflows/ci.yml/badge.svg)](https://github.com/qquartsco-svg/memoryCHIPs/actions)
 
 ---
@@ -27,19 +27,20 @@
 4. [칩 아키텍처: 기억 전용 코프로세서](#4-칩-아키텍처-기억-전용-코프로세서)
 5. [10레이어 평가 모델 — Ω_chip 수식](#5-10레이어-평가-모델--ω_chip-수식)
 6. [DesignTier: 전문·범용·혼합 3트랙](#6-designtier-전문범용혼합-3트랙)
-7. [판정 구간 (ChipVerdict)](#7-판정-구간-chipverdict)
-8. [Fabrication Readiness Gate](#8-fabrication-readiness-gate)
-9. [Chip Bridge — 기존 엔진 연동](#9-chip-bridge--기존-엔진-연동)
-10. [빠른 시작](#10-빠른-시작)
-11. [프리셋 8종](#11-프리셋-8종)
-12. [CLI 사용법](#12-cli-사용법)
-13. [전체 운영 흐름](#13-전체-운영-흐름)
-14. [확장·활용 방향](#14-확장활용-방향)
-15. [현재 한계](#15-현재-한계)
-16. [추후 방향](#16-추후-방향)
-17. [무결성·블록체인 서명](#17-무결성블록체인-서명)
-18. [패키지 구조](#18-패키지-구조)
-19. [라이선스](#19-라이선스)
+7. [DesignPhase: 구현 성숙도 5단계](#7-designphase-구현-성숙도-5단계)
+8. [판정 구간 (ChipVerdict)](#8-판정-구간-chipverdict)
+9. [Fabrication Readiness Gate](#9-fabrication-readiness-gate)
+10. [Chip Bridge — 기존 엔진 연동](#10-chip-bridge--기존-엔진-연동)
+11. [빠른 시작](#11-빠른-시작)
+12. [프리셋 10종](#12-프리셋-10종)
+13. [CLI 사용법](#13-cli-사용법)
+14. [전체 운영 흐름](#14-전체-운영-흐름)
+15. [확장·활용 방향](#15-확장활용-방향)
+16. [현재 한계](#16-현재-한계)
+17. [추후 방향](#17-추후-방향)
+18. [무결성·블록체인 서명](#18-무결성블록체인-서명)
+19. [패키지 구조](#19-패키지-구조)
+20. [라이선스](#20-라이선스)
 
 ---
 
@@ -400,7 +401,81 @@ L10 OS & Ecosystem Compatibility  [GP/Hybrid 전용]
 
 ---
 
-## 7. 판정 구간 (ChipVerdict)
+## 7. DesignPhase: 구현 성숙도 5단계
+
+### 왜 DesignPhase가 필요한가?
+
+Ω_chip 점수는 **입력 파라미터를 기준으로 계산한 이상값(목표값)**이다.  
+`rtl_coverage_pct=90`을 넣는다고 해서 RTL이 90% 완성된 게 아니다 —  
+"RTL이 90% 완성된다면 이 점수가 나온다"는 **가정 위 추정**이다.
+
+`DesignPhase`는 이 이상값과 현실 사이의 간극을 명시하는 장치다.
+
+```
+omega_chip    = 입력 파라미터 기준 이상/목표 점수   (phase 무관)
+omega_context = omega_chip × phase_realism         (현실 반영 추정치)
+gap_to_tapeout = max(0, 0.85 − omega_chip)          (목표까지 남은 거리)
+```
+
+### 5단계 구조
+
+```
+ 단계              현실 계수   의미
+ ──────────────────────────────────────────────────────────────────
+ concept       ×0.30   소프트웨어 로직만 존재. RTL·PDK·파운드리 전무.
+ specification ×0.52   마이크로아키텍처 명세 완성. RTL 스켈레톤 미착수.
+ prototype     ×0.72   FPGA 프로토타입 존재. 일부 RTL 검증됨.
+ rtl_complete  ×0.90   Verilog/VHDL 완성. 합성·시뮬레이션 진행 중.
+ production    ×1.00   DRC/LVS Signoff 완료. 파운드리 테이프아웃 준비.
+```
+
+### 실제 사용 예
+
+```
+현재 00_BRAIN 메모리 시스템의 실제 위치
+─────────────────────────────────────────────────────────────────
+analyze_preset("Brain_Current_State")
+  omega_chip    = 0.170  ← "이 설계 방향이 완성되면 달성 가능한 이상값"
+  omega_context = 0.051  ← 현실 보정값 (concept × 0.30)
+  gap_to_tapeout = 0.680 ← tapeout_ready(0.85)까지 남은 거리
+
+analyze_preset("Robot_Memory_SoC")   ← 목표 시나리오
+  omega_chip    = 0.944  ← 모든 파라미터 이상적 설정 시 목표값
+  omega_context = 0.283  ← concept 단계에서 현실 보정값
+  gap_to_tapeout = 0.000 ← 이상값 기준으론 이미 도달
+```
+
+이 두 숫자의 차이가 중요하다:
+
+```
+                omega_chip   omega_context
+                (이상값)       (현실값)
+                ─────────────────────────
+Brain_Current_State:   0.170  →  0.051   ← 지금 여기
+Brain_Spec_Target:     0.387  →  0.201   ← 명세 완성 후
+Robot_Memory_SoC:      0.944  →  0.283   ← 모든 것이 완성될 때
+```
+
+### Python API
+
+```python
+from memory_chip_readiness import analyze, DesignPhase
+
+# concept 단계 (기본값) — 소프트웨어만 있음
+rpt = analyze(design_phase=DesignPhase.concept)
+print(f"이상값:       {rpt.omega_chip:.3f}")
+print(f"현실 보정값:  {rpt.omega_context:.3f}")   # × 0.30
+print(f"목표까지:     {rpt.gap_to_tapeout:.3f}")
+print(rpt.phase_note)
+
+# prototype 단계 — FPGA 검증 후
+rpt2 = analyze(design_phase=DesignPhase.prototype)
+print(f"현실 보정값:  {rpt2.omega_context:.3f}")  # × 0.72
+```
+
+---
+
+## 8. 판정 구간 (ChipVerdict)
 
 ```
  Ω_chip
@@ -591,35 +666,45 @@ summary = rpt.to_summary_dict()  # JSON 직렬화 가능 딕셔너리
 
 ---
 
-## 11. 프리셋 8종
+## 12. 프리셋 10종
 
-### Accelerator Tier — 전문 메모리 가속기 (5종)
+### Reality Tier — 실제 현재 구현 상태 (2종) ← 여기서부터 읽는다
 
-| 프리셋 | 시나리오 | 예상 Ω_chip | 판정 |
+| 프리셋 | 단계 | Ω 이상값 | Ω 현실값 | 판정 |
+|---|---|---|---|---|
+| `Brain_Current_State` | concept (RTL 전무) | 0.17 | **0.05** | concept_only |
+| `Brain_Spec_Target` | specification (명세 완성 목표) | 0.39 | **0.20** | architecture_defined |
+
+> **이것이 실제 우리가 지금 있는 위치다.** `Brain_Current_State`는 Python 코드는 완성됐지만
+> RTL·파운드리·PDK가 없는 현재 상태를 반영한다. omega_context(현실값)=**0.05**.
+
+### Accelerator Tier — 전문 메모리 가속기 목표 시나리오 (5종)
+
+| 프리셋 | Ω 이상값 | Ω 현실값(concept) | 판정 |
 |---|---|---|---|
-| `FPGA_STM_Prototype` | STM 전용 FPGA 프로토타입 — 초기 검증 단계 | **0.29** | concept_only |
-| `EdgeAI_Memory_Coprocessor` | 엣지 AI 메모리 코프로세서 (14nm, 양산 근접) | **0.82** | silicon_candidate |
-| `Robot_Memory_SoC` | 로봇/안드로이드 메모리 SoC (7nm, 이상적 목표치) | **0.94** | tapeout_ready |
-| `Concept_BrainChip` | 초기 콘셉트 뇌 칩 — 소프트웨어 로직만 존재 | **0.17** | concept_only |
-| `Spaceship_MemoryUnit` | 우주선 탑재 메모리 (65nm, 극한 온도·방사선 환경) | **0.78** | silicon_candidate |
+| `FPGA_STM_Prototype` | 0.29 | 0.09 | concept_only |
+| `EdgeAI_Memory_Coprocessor` | **0.82** | 0.25 | silicon_candidate |
+| `Robot_Memory_SoC` | **0.94** | 0.28 | tapeout_ready |
+| `Concept_BrainChip` | 0.17 | 0.05 | concept_only |
+| `Spaceship_MemoryUnit` | 0.78 | 0.24 | silicon_candidate |
 
-> `Robot_Memory_SoC`의 0.94는 모든 파라미터가 이상적으로 설정된 **목표 벤치마크**다.
-> 실제 로봇 SoC 프로젝트 초기 점수는 0.15–0.30 수준이다.
+> 모든 Accelerator 프리셋의 design_phase는 `concept`(기본값). Ω 이상값은 "해당 파라미터가
+> 모두 달성되면 얻는 목표 점수"이며, Ω 현실값은 concept 단계 보정(×0.30)이다.
 
 ### General-Purpose Tier — 범용 메모리 (2종)
 
-| 프리셋 | 시나리오 | 예상 Ω_chip | 판정 |
+| 프리셋 | Ω 이상값 | Ω 현실값(concept) | 판정 |
 |---|---|---|---|
-| `GP_DDR5_Compatible` | DDR5 JEDEC 표준 호환 범용 메모리 | **0.88** | tapeout_ready |
-| `GP_CXL_Datacenter` | CXL 3.0 데이터센터 메모리 확장 모듈 | **0.89** | tapeout_ready |
+| `GP_DDR5_Compatible` | **0.88** | 0.26 | tapeout_ready |
+| `GP_CXL_Datacenter` | **0.89** | 0.27 | tapeout_ready |
 
 ### Hybrid Tier — 혼합형 (1종)
 
-| 프리셋 | 시나리오 | 예상 Ω_chip | 판정 |
+| 프리셋 | Ω 이상값 | Ω 현실값(concept) | 판정 |
 |---|---|---|---|
-| `Hybrid_SmartMemory_Module` | STM 정책 엔진 + DDR5 인터페이스 혼합 모듈 | **0.84** | silicon_candidate |
+| `Hybrid_SmartMemory_Module` | **0.84** | 0.25 | silicon_candidate |
 
-모든 프리셋은 **가상 시나리오**이며 실제 특정 칩 제품과 무관하다.
+Reality 2종 외 모든 프리셋은 **가상 설계 목표 시나리오**이며 실제 특정 칩 제품과 무관하다.
 
 ---
 
@@ -828,7 +913,7 @@ v0.2.0  22 files verified  ✓  (Block #3 — 2026-04-15 최종 공개 점검)
 ```
 memoryCHIPs/
 ├── LICENSE
-├── pyproject.toml                  memory-chip-readiness 0.2.0, stdlib-only
+├── pyproject.toml                  memory-chip-readiness 0.3.0, stdlib-only
 ├── .gitignore
 ├── .github/workflows/ci.yml       Python 3.10 · 3.12 CI
 ├── README.md                      한국어 정본 (이 파일)
@@ -862,13 +947,13 @@ memoryCHIPs/
     ├── ecosystem_compat.py         L10 OS·에코시스템 호환성
     │
     ├── foundation.py               통합 오케스트레이터 (DesignTier 기반 10레이어)
-    ├── presets.py                  프리셋 8종 (Accel 5 + GP 2 + Hybrid 1)
+    ├── presets.py                  프리셋 10종 (Accel 5 + GP 2 + Hybrid 1 + Reality 2)
     ├── cli.py                      CLI entry-point (--tier 지원)
     └── tests/
         ├── __init__.py
-        └── test_memory_chip.py    63개 테스트
+        └── test_memory_chip.py    80개 테스트
                                     (계약·코어·GP레이어·Foundation·프리셋·
-                                     직렬화·CLI·가중치불변식)
+                                     직렬화·CLI·가중치불변식·DesignPhase·Reality)
 ```
 
 ---

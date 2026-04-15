@@ -6,8 +6,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0-orange)](CHANGELOG.md)
-[![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)](memory_chip_readiness/tests/test_memory_chip.py)
+[![Version](https://img.shields.io/badge/version-0.3.0-orange)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-80%20passed-brightgreen)](memory_chip_readiness/tests/test_memory_chip.py)
 [![CI](https://github.com/qquartsco-svg/memoryCHIPs/actions/workflows/ci.yml/badge.svg)](https://github.com/qquartsco-svg/memoryCHIPs/actions)
 
 ---

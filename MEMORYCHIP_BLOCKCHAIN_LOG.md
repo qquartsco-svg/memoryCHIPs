@@ -1,5 +1,33 @@
 # Memory Chip Readiness — Blockchain Log
 
+## Block #4 — v0.3.0 (DesignPhase + Reality Presets)
+
+- **Date**: 2026-04-16
+- **Author**: GNJz / 00_BRAIN
+- **Version**: memory-chip-readiness 0.3.0
+- **Previous Block**: Block #3 (v0.2.0 최종 공개 점검)
+
+### 핵심 개선 사항
+
+- **DesignPhase 도입**: `concept / specification / prototype / rtl_complete / production` 5단계 enum.  
+  `omega_chip`(이상값)과 `omega_context`(phase × 현실 보정값)를 분리하여 "시뮬레이션 점수 ≠ 실제 구현 완성도" 혼동 해소.
+- **omega_context**: `omega_chip × phase_realism` 계산. concept(×0.30)~production(×1.00).
+- **gap_to_tapeout**: `max(0, 0.85 − omega_chip)` — tapeout_ready 임계까지 남은 이상값 거리.
+- **phase_note**: 단계별 설명 문자열. `to_summary_dict()` / `to_edge_signal()`에 포함.
+- **Reality 프리셋 2종 추가**:
+  - `Brain_Current_State` (concept): 실제 00_BRAIN 현재 상태. Ω=0.170, ctx=0.051.
+  - `Brain_Spec_Target` (specification): 마이크로아키텍처 명세 완성 목표. Ω=0.387, ctx=0.201.
+- **테스트 수**: 63 → 80개 (TestDesignPhase 10개 + TestRealityPresets 7개 추가)
+- **SIGNATURE.sha256**: 재서명 완료
+
+### Integrity
+
+- `pytest`: 80 passed
+- `ruff`: All checks passed
+- `SIGNATURE.sha256`: 재서명 완료
+
+---
+
 ## Block #3 — v0.2.0 (최종 공개 점검)
 
 - **Date**: 2026-04-15

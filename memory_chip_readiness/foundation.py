@@ -11,10 +11,13 @@ from typing import Optional
 from .cache_coherency import assess_cache_coherency
 from .consolidation_scheduler import assess_consolidation
 from .contracts import (
+    _PHASE_NOTES,
+    _PHASE_REALISM,
     CacheCoherencyProfile,
     ChipBridgeSignal,
     ChipVerdict,
     ConsolidationSchedulerProfile,
+    DesignPhase,
     DesignTier,
     EcosystemCompatProfile,
     FabricationGate,
@@ -170,6 +173,7 @@ def _chip_bridge(
 def analyze(
     *,
     tier: DesignTier = DesignTier.accelerator,
+    design_phase: DesignPhase = DesignPhase.concept,
     stm: Optional[STMMicroarchProfile] = None,
     ltm: Optional[LTMSearchAccelProfile] = None,
     consolidation: Optional[ConsolidationSchedulerProfile] = None,
@@ -181,7 +185,20 @@ def analyze(
     multi_tenant: Optional[MultiTenantProfile] = None,
     ecosystem: Optional[EcosystemCompatProfile] = None,
 ) -> MemoryChipReadinessReport:
-    """Run memory-chip readiness analysis. Layer count depends on tier."""
+    """Run memory-chip readiness analysis. Layer count depends on tier.
+
+    Args:
+        tier: DesignTier (accelerator / general_purpose / hybrid)
+        design_phase: 현재 구현 성숙도. omega_context (현실 보정 점수) 계산에 사용.
+            - concept      : 소프트웨어 로직만 존재. RTL 전무. (기본값)
+            - specification: 마이크로아키텍처 명세 작성 중.
+            - prototype    : FPGA 프로토타입 존재.
+            - rtl_complete : Verilog/VHDL 완성, 시뮬레이션 진행 중.
+            - production   : Signoff 완료, 테이프아웃 준비.
+        omega_chip  = 입력 파라미터 기준 이상/목표 점수 (phase 무관).
+        omega_context = omega_chip × phase_realism  (현실 반영 추정치).
+        gap_to_tapeout = max(0, 0.85 - omega_chip)  (목표까지 남은 거리).
+    """
 
     stm_p = stm or STMMicroarchProfile()
     ltm_p = ltm or LTMSearchAccelProfile()
@@ -236,6 +253,12 @@ def analyze(
     bridge = _chip_bridge(results, omega_chip)
     layer_omegas = {lr.layer: lr.omega for lr in results}
 
+    # design_phase 현실 보정
+    phase_realism = _PHASE_REALISM[design_phase]
+    omega_context = round(omega_chip * phase_realism, 4)
+    gap_to_tapeout = round(max(0.0, 0.85 - omega_chip), 4)
+    phase_note = _PHASE_NOTES[design_phase]
+
     return MemoryChipReadinessReport(
         design_tier=tier,
         omega_chip=round(omega_chip, 4),
@@ -254,4 +277,8 @@ def analyze(
         omega_ecosystem_compat=round(layer_omegas.get("ecosystem_compat", 0.0), 4),
         fabrication_gate=gate,
         chip_bridge=bridge,
+        design_phase=design_phase,
+        omega_context=omega_context,
+        gap_to_tapeout=gap_to_tapeout,
+        phase_note=phase_note,
     )

@@ -1,7 +1,11 @@
-"""Memory Chip Readiness Foundation — preset scenarios (8종).
+"""Memory Chip Readiness Foundation — preset scenarios (10종).
 
 각 프리셋은 가상 설계 시나리오이며 실제 특정 칩 제품과 무관하다.
-Accelerator(전문) 5종 + General-Purpose(범용) 2종 + Hybrid 1종.
+Accelerator(전문) 5종 + General-Purpose(범용) 2종 + Hybrid 1종 + Reality(현실) 2종.
+
+Reality 프리셋 (2종)은 실제 현재 구현 상태를 반영:
+  Brain_Current_State   : 00_BRAIN 메모리가 실제로 있는 곳 (concept 단계, RTL 전무)
+  Brain_Spec_Target     : 마이크로아키텍처 명세 완성 목표 (specification 단계)
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from .contracts import (
     BusProtocol,
     CacheCoherencyProfile,
     ConsolidationSchedulerProfile,
+    DesignPhase,
     DesignTier,
     EcosystemCompatProfile,
     HostInterfaceProfile,
@@ -491,5 +496,120 @@ _register(
         numa_aware=False, ras_features=True,
         monitoring_counters=True, documentation_complete=True,
         sdk_available=True,
+    ),
+)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  REALITY TIER — 실제 현재 구현 상태 (2종)
+#  이상적 "목표" 프리셋이 아니라, 00_BRAIN이 지금 실제로 있는 위치를 반영.
+#  omega_chip(이상값)과 omega_context(현실 보정값)의 격차를 명확히 보여준다.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+_register(
+    "Brain_Current_State",
+    # 현재 00_BRAIN 메모리 시스템의 실제 하드웨어 준비도.
+    # Python 코드는 완성됐지만 RTL·PDK·파운드리 계약 전무.
+    # omega_context(=omega_chip×0.30)가 현실적 추정치.
+    tier=DesignTier.accelerator,
+    design_phase=DesignPhase.concept,
+    stm=STMMicroarchProfile(
+        max_slots=128,              # Python STM에 정의됨
+        slot_width_bits=256,
+        eviction_policy_defined=True,   # 정책 로직 Python 코드에 존재
+        decay_engine_fsm=False,         # FSM/회로 없음
+        ttl_timer_hw=False,             # 하드웨어 타이머 없음
+        query_filter_block=False,       # 하드웨어 필터 없음
+        namespace_support=True,         # 개념적으로 정의됨
+        priority_queue_hw=False,        # HW priority queue 없음
+        strength_bits=8,
+        cycle_budget_put=0,             # 미측정
+        cycle_budget_get=0,
+        sram_compiler_validated=False,  # SRAM 컴파일러 미검증
+        rtl_coverage_pct=0.0,           # RTL 전무
+    ),
+    ltm=LTMSearchAccelProfile(
+        vector_dim=128,                 # Python LTM에 정의됨
+        similarity_engine_type="dot_product",
+        top_k_hw=False,                 # 하드웨어 top-k 없음
+        max_wells=4096,                 # 개념적 크기
+        external_storage_interface=False,
+        episodic_log_engine=False,
+        cam_lookup_support=False,
+        rtl_coverage_pct=0.0,           # RTL 전무
+    ),
+    consolidation=ConsolidationSchedulerProfile(
+        eligibility_fsm=False,          # FSM 없음
+        dma_controller=False,           # DMA 없음
+        merge_arbiter=False,
+        rtl_coverage_pct=0.0,
+    ),
+    physical=PhysicalMemoryProfile(
+        stm_tech=MemoryTech.sram,       # 기술 방향만 선정
+        stm_capacity_kb=0,              # 용량 미산정
+        ltm_capacity_mb=0,
+        tech_validated=False,           # 검증 미실시
+    ),
+    host=HostInterfaceProfile(
+        bus_protocol=BusProtocol.axi4,  # 방향만 결정
+        register_map_defined=False,     # 레지스터맵 없음
+        driver_api_spec=False,
+    ),
+    process=ProcessAreaPowerProfile(
+        process_node=ProcessNode.nm28,  # 목표 노드 (미확정)
+        foundry_pdk_available=False,    # PDK 없음
+        dft_scan_chain=False,           # DFT 없음
+    ),
+)
+
+_register(
+    "Brain_Spec_Target",
+    # 마이크로아키텍처 명세 완성 후 도달하려는 중간 목표.
+    # design_phase=specification: RTL 스켈레톤 착수 직전 단계.
+    tier=DesignTier.accelerator,
+    design_phase=DesignPhase.specification,
+    stm=STMMicroarchProfile(
+        max_slots=128,
+        eviction_policy_defined=True,
+        decay_engine_fsm=True,          # FSM 블록 다이어그램 정의됨
+        ttl_timer_hw=True,              # 타이머 블록 명세 완성
+        query_filter_block=True,
+        namespace_support=True,
+        strength_bits=8,
+        cycle_budget_put=4,             # 목표 사이클 명세됨
+        cycle_budget_get=2,
+        sram_compiler_validated=False,  # 아직 미검증
+        rtl_coverage_pct=0.0,           # RTL 스켈레톤 없음
+    ),
+    ltm=LTMSearchAccelProfile(
+        vector_dim=256,
+        similarity_engine_type="cosine",
+        top_k_hw=True,
+        max_wells=8192,
+        external_storage_interface=True,
+        rtl_coverage_pct=0.0,
+    ),
+    consolidation=ConsolidationSchedulerProfile(
+        eligibility_fsm=True,
+        dma_controller=True,
+        merge_arbiter=True,
+        rtl_coverage_pct=0.0,
+    ),
+    physical=PhysicalMemoryProfile(
+        stm_tech=MemoryTech.sram,
+        stm_capacity_kb=64,
+        ltm_capacity_mb=256,
+        ecc_support=True,
+        tech_validated=False,
+    ),
+    host=HostInterfaceProfile(
+        bus_protocol=BusProtocol.axi4,
+        bus_width_bits=64,
+        dma_channels=2,
+        register_map_defined=True,      # 명세 완성
+    ),
+    process=ProcessAreaPowerProfile(
+        process_node=ProcessNode.nm14,
+        foundry_pdk_available=False,
+        dft_scan_chain=False,
     ),
 )

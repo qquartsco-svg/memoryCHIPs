@@ -8,10 +8,12 @@ import sys
 import unittest
 
 from memory_chip_readiness.contracts import (
+    _PHASE_REALISM,
     BusProtocol,
     CacheCoherencyProfile,
     ChipVerdict,
     ConsolidationSchedulerProfile,
+    DesignPhase,
     DesignTier,
     EcosystemCompatProfile,
     HostInterfaceProfile,
@@ -356,7 +358,7 @@ class TestFoundationGP(unittest.TestCase):
 class TestPresets(unittest.TestCase):
     def test_list_presets_count(self) -> None:
         presets = list_presets()
-        self.assertEqual(len(presets), 8)
+        self.assertEqual(len(presets), 10)
 
     def test_accel_presets_exist(self) -> None:
         presets = list_presets()
@@ -477,6 +479,115 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         d = json.loads(r.stdout)
         self.assertEqual(d["design_tier"], "general_purpose")
+
+
+# ── DesignPhase & Reality ────────────────────────────────────────
+
+
+class TestDesignPhase(unittest.TestCase):
+    def test_phase_enum_values(self) -> None:
+        self.assertEqual(DesignPhase.concept.value, "concept")
+        self.assertEqual(DesignPhase.production.value, "production")
+
+    def test_phase_realism_all_phases_defined(self) -> None:
+        for phase in DesignPhase:
+            self.assertIn(phase, _PHASE_REALISM)
+            self.assertGreater(_PHASE_REALISM[phase], 0.0)
+            self.assertLessEqual(_PHASE_REALISM[phase], 1.0)
+
+    def test_phase_realism_monotonic(self) -> None:
+        """생산에 가까울수록 현실 계수가 단조증가."""
+        ordered = [
+            DesignPhase.concept, DesignPhase.specification,
+            DesignPhase.prototype, DesignPhase.rtl_complete,
+            DesignPhase.production,
+        ]
+        vals = [_PHASE_REALISM[p] for p in ordered]
+        self.assertEqual(vals, sorted(vals))
+
+    def test_omega_context_lt_omega_chip_for_concept(self) -> None:
+        rpt = analyze(design_phase=DesignPhase.concept)
+        self.assertLessEqual(rpt.omega_context, rpt.omega_chip)
+
+    def test_omega_context_equals_omega_chip_for_production(self) -> None:
+        rpt = analyze(design_phase=DesignPhase.production)
+        self.assertAlmostEqual(rpt.omega_context, rpt.omega_chip, places=4)
+
+    def test_gap_to_tapeout_zero_when_high(self) -> None:
+        """Ω_chip ≥ 0.85 → gap = 0."""
+        rpt = analyze_preset("Robot_Memory_SoC")
+        if rpt.omega_chip >= 0.85:
+            self.assertEqual(rpt.gap_to_tapeout, 0.0)
+
+    def test_gap_to_tapeout_positive_when_low(self) -> None:
+        rpt = analyze_preset("FPGA_STM_Prototype")
+        self.assertGreater(rpt.gap_to_tapeout, 0.0)
+        self.assertAlmostEqual(
+            rpt.gap_to_tapeout,
+            max(0.0, 0.85 - rpt.omega_chip),
+            places=4,
+        )
+
+    def test_phase_note_not_empty(self) -> None:
+        for phase in DesignPhase:
+            rpt = analyze(design_phase=phase)
+            self.assertGreater(len(rpt.phase_note), 10)
+
+    def test_summary_dict_has_phase_fields(self) -> None:
+        rpt = analyze(design_phase=DesignPhase.prototype)
+        d = rpt.to_summary_dict()
+        self.assertIn("design_phase", d)
+        self.assertIn("omega_context", d)
+        self.assertIn("gap_to_tapeout", d)
+        self.assertEqual(d["design_phase"], "prototype")
+
+    def test_edge_signal_has_phase_fields(self) -> None:
+        rpt = analyze(design_phase=DesignPhase.specification)
+        sig = rpt.to_edge_signal()
+        self.assertIn("design_phase", sig)
+        self.assertIn("omega_context", sig)
+        self.assertIn("gap_to_tapeout", sig)
+
+
+class TestRealityPresets(unittest.TestCase):
+    def test_brain_current_state_exists(self) -> None:
+        self.assertIn("Brain_Current_State", list_presets())
+
+    def test_brain_spec_target_exists(self) -> None:
+        self.assertIn("Brain_Spec_Target", list_presets())
+
+    def test_brain_current_state_very_low_omega(self) -> None:
+        """RTL 전무 + PDK 없음 → Ω가 매우 낮아야 한다."""
+        rpt = analyze_preset("Brain_Current_State")
+        self.assertLess(rpt.omega_chip, 0.25)
+        self.assertEqual(rpt.design_phase, DesignPhase.concept)
+
+    def test_brain_current_state_omega_context_much_lower(self) -> None:
+        """concept 단계: omega_context ≈ omega_chip × 0.30."""
+        rpt = analyze_preset("Brain_Current_State")
+        expected = round(rpt.omega_chip * 0.30, 4)
+        self.assertAlmostEqual(rpt.omega_context, expected, places=3)
+
+    def test_brain_spec_target_mid_omega(self) -> None:
+        """명세 완성 목표 → Ω이 Current보다 높아야 한다."""
+        current = analyze_preset("Brain_Current_State")
+        spec    = analyze_preset("Brain_Spec_Target")
+        self.assertGreater(spec.omega_chip, current.omega_chip)
+        self.assertEqual(spec.design_phase, DesignPhase.specification)
+
+    def test_reality_gap_shows_distance_to_tapeout(self) -> None:
+        rpt = analyze_preset("Brain_Current_State")
+        # gap > 0 이고 0.85에 가까워야 함 (Ω가 낮으니까)
+        self.assertGreater(rpt.gap_to_tapeout, 0.5)
+
+    def test_reality_presets_gated(self) -> None:
+        """현재 상태 프리셋은 테이프아웃 게이트를 통과하면 안 된다."""
+        for name in ("Brain_Current_State", "Brain_Spec_Target"):
+            rpt = analyze_preset(name)
+            self.assertFalse(
+                rpt.fabrication_gate.ready_for_tapeout,
+                msg=f"{name} should be gate-blocked",
+            )
 
 
 # ── Weight Integrity ─────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 STM/LTM/Consolidation 메모리 로직 → 실리콘 준비도 스크리닝 엔진.
 DesignTier: accelerator(전문) / general_purpose(범용) / hybrid.
+DesignPhase: concept → specification → prototype → rtl_complete → production.
 """
 
 from .cli import cli_main
@@ -11,6 +12,7 @@ from .contracts import (
     ChipBridgeSignal,
     ChipVerdict,
     ConsolidationSchedulerProfile,
+    DesignPhase,
     DesignTier,
     EcosystemCompatProfile,
     FabricationGate,
@@ -36,6 +38,7 @@ __all__ = [
     # enums
     "BusProtocol",
     "ChipVerdict",
+    "DesignPhase",
     "DesignTier",
     "MemoryStandard",
     "MemoryTech",
