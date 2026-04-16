@@ -1,5 +1,75 @@
 # Memory Chip Readiness — Blockchain Log
 
+## Block #5 — v0.3.1 (Graph-Rank + Association-Edge Extension)
+
+- **Date**: 2026-04-16
+- **Author**: GNJz / 00_BRAIN
+- **Version**: memory-chip-readiness 0.3.1
+- **Previous Block**: Block #4 (v0.3.0 DesignPhase + Reality Presets)
+
+### 핵심 개선 사항
+
+#### L02 — `LTMSearchAccelProfile` : graph-rank (PageRank-style) 확장
+
+기존 벡터 유사도(cosine / dot_product / L2 / Hamming) 위에 **연상 그래프 재순위 엔진**을 설계 방향으로 기록할 수 있는 파라미터 4종을 추가했다.
+
+| 파라미터 | 의미 |
+|----------|------|
+| `graph_rank_support` | SpMV(희소 행렬×벡터) PageRank 파이프라인 HW 설계 여부 |
+| `adjacency_store_kb` | 연상 엣지(인접 리스트) 온칩 SRAM KB |
+| `rank_propagation_hw` | 수렴 판정 + 랭크 벡터 버퍼 HW 구현 여부 |
+| `graph_search_latency_ns` | 그래프 재순위 1회 지연 목표 (ns) |
+
+ω 가중치: 기존 5개 서브스코어를 ×0.90 정규화 + graph_rank 최대 +0.10 → 총합 1.00 유지.
+
+#### L03 — `ConsolidationSchedulerProfile` : association-edge (연상 엣지 소스) 확장
+
+STM→LTM 통합(consolidation) 이벤트 시 **함께 통합된 기억 쌍을 연상 엣지로 기록**하는 HW 로그 파라미터 3종 추가.  
+이 엣지 데이터가 L02 graph_rank 엔진의 직접 입력 소스가 된다.
+
+| 파라미터 | 의미 |
+|----------|------|
+| `association_edge_log` | consolidation 이벤트 시 공동 통합 기억 쌍 → 엣지 HW 기록 버퍼 |
+| `edge_weight_decay_hw` | 엣지 강도 시간 감쇠 HW 처리 |
+| `max_edges_per_event` | 단일 이벤트당 기록 최대 엣지 수 |
+
+ω 가중치: 기존 5개 서브스코어 ×0.90 + association_edge 최대 +0.10 → 총합 1.00 유지.
+
+#### 설계 흐름 연결
+
+```
+ConsolidationSchedulerProfile.association_edge_log  (L03)
+        │  STM→LTM 통합 시 공동 활성화 기억 쌍 → 엣지 기록
+        ▼
+LTMSearchAccelProfile.graph_rank_support            (L02)
+        │  벡터 유사도 top-k 후보 → SpMV 재순위
+        ▼
+최종 recall: "유사도" + "연상 구조에서 자주 연결된 기억" 가중 합산
+```
+
+#### 프리셋 업데이트 (graph_rank 파라미터 반영)
+
+| 프리셋 | LTM graph_rank | consolidation edge_log |
+|--------|---------------|------------------------|
+| `Robot_Memory_SoC` | ✓ (adjacency 256KB, propagation HW) | ✓ (edge_decay, max 8) |
+| `EdgeAI_Memory_Coprocessor` | ✓ (adjacency 64KB) | ✓ (max 4) |
+| `Brain_Spec_Target` | ✓ (adjacency 128KB, concept 방향) | ✓ (max 4) |
+
+#### 테스트
+
+- `TestGraphRankExtension` 신규 8케이스 추가
+- 기존 CLI 테스트 `_CWD` 하드코딩 경로 버그 수정 (동적 Path 계산으로 대체)
+- **89/89 passing**
+
+### Integrity
+
+- `pytest`: **89 passed**
+- `ruff`: All checks passed
+- `SIGNATURE.sha256`: **22개 파일** 재서명 완료
+- push: `origin/main` `13f54b4`
+
+---
+
 ## Block #4 — v0.3.0 (DesignPhase + Reality Presets)
 
 - **Date**: 2026-04-16
