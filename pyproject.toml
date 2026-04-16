@@ -4,7 +4,7 @@ build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
 name = "memory-chip-readiness"
-version = "0.3.0"
+version = "0.3.1"
 description = "Memory Chip Readiness Foundation — STM/LTM/Consolidation 메모리 로직 → 실리콘 준비도 스크리닝 엔진"
 readme = "README.md"
 license = {text = "MIT"}

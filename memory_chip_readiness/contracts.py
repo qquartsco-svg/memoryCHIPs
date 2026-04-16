@@ -162,7 +162,20 @@ class STMMicroarchProfile:
 
 @dataclass
 class LTMSearchAccelProfile:
-    """L02: 장기 메모리 검색 가속기 준비도 입력."""
+    """L02: 장기 메모리 검색 가속기 준비도 입력.
+
+    Graph-rank 확장 (graph_rank_*):
+      - graph_rank_support      : 벡터 유사도 외에 연상 그래프 랭크 재순위 엔진 설계 여부.
+                                  PageRank-style SpMV(희소 행렬×벡터) 파이프라인.
+      - adjacency_store_kb      : 인접 리스트(연상 엣지) 저장용 온칩 SRAM KB.
+                                  0 = 미설계.
+      - rank_propagation_hw     : 수렴 판정 + 랭크 벡터 버퍼를 하드웨어로 구현 여부.
+      - graph_search_latency_ns : 그래프 랭크 재순위 1회 지연 목표 (ns).
+                                  0 = 미설정.
+
+    이 필드들은 '지금 RTL 설계'가 목적이 아니라 concept/specification 단계에서
+    설계 방향을 기록하는 파라미터다. ω 계산에는 선택 가중치(0.10)로 반영된다.
+    """
 
     vector_dim: int = 128
     similarity_engine_type: str = "dot_product"
@@ -175,6 +188,11 @@ class LTMSearchAccelProfile:
     index_cache_kb: int = 0
     search_latency_target_ns: int = 0
     rtl_coverage_pct: float = 0.0
+    # ── Graph-rank extension (PageRank-style associative recall) ──
+    graph_rank_support: bool = False
+    adjacency_store_kb: int = 0
+    rank_propagation_hw: bool = False
+    graph_search_latency_ns: int = 0
 
 
 # ── L03  Consolidation Scheduler ─────────────────────────────────
@@ -182,7 +200,17 @@ class LTMSearchAccelProfile:
 
 @dataclass
 class ConsolidationSchedulerProfile:
-    """L03: 통합(컨솔리데이션) 스케줄러 준비도 입력."""
+    """L03: 통합(컨솔리데이션) 스케줄러 준비도 입력.
+
+    Association-edge 확장 (association_edge_*):
+      - association_edge_log    : STM→LTM 통합 시 함께 올라온 기억들 사이의 연상 엣지를
+                                  기록하는 하드웨어 로그 버퍼 설계 여부.
+                                  이 필드가 True이면 PageRank 계산에 필요한 엣지 데이터가
+                                  consolidation 이벤트에서 자연스럽게 생성된다.
+      - edge_weight_decay_hw    : 엣지 가중치(연상 강도) 시간 감쇠를 하드웨어로 처리 여부.
+      - max_edges_per_event     : 단일 통합 이벤트에서 기록 가능한 최대 엣지 수.
+                                  0 = 미설계.
+    """
 
     eligibility_fsm: bool = False
     dma_controller: bool = False
@@ -194,6 +222,10 @@ class ConsolidationSchedulerProfile:
     pipeline_stages: int = 0
     power_gating_support: bool = False
     rtl_coverage_pct: float = 0.0
+    # ── Association-edge extension (graph-rank edge source) ───────
+    association_edge_log: bool = False
+    edge_weight_decay_hw: bool = False
+    max_edges_per_event: int = 0
 
 
 # ── L04  Physical Memory Layer ───────────────────────────────────

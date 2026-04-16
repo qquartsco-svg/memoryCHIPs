@@ -30,7 +30,9 @@ from memory_chip_readiness.contracts import (
 from memory_chip_readiness.foundation import analyze
 from memory_chip_readiness.presets import analyze_preset, list_presets
 
-_CWD = "/Users/jazzin/Desktop/00_BRAIN/_staging/Memory_Chip_Readiness_Foundation"
+_CWD = str(
+    __import__("pathlib").Path(__file__).resolve().parents[2]
+)
 
 
 # ── Contracts ────────────────────────────────────────────────────
@@ -633,6 +635,112 @@ class TestWeightIntegrity(unittest.TestCase):
         for wmap in (_WEIGHTS_ACCELERATOR, _WEIGHTS_GENERAL_PURPOSE, _WEIGHTS_HYBRID):
             for k, v in wmap.items():
                 self.assertGreater(v, 0.0, msg=f"Weight {k}={v} must be positive")
+
+
+# ── Graph-rank & Association-edge Extension ──────────────────────
+
+
+class TestGraphRankExtension(unittest.TestCase):
+    """graph_rank_* (L02) + association_edge_* (L03) 파라미터 검증."""
+
+    def test_ltm_defaults_graph_rank_false(self) -> None:
+        p = LTMSearchAccelProfile()
+        self.assertFalse(p.graph_rank_support)
+        self.assertEqual(p.adjacency_store_kb, 0)
+        self.assertFalse(p.rank_propagation_hw)
+        self.assertEqual(p.graph_search_latency_ns, 0)
+
+    def test_consolidation_defaults_edge_log_false(self) -> None:
+        p = ConsolidationSchedulerProfile()
+        self.assertFalse(p.association_edge_log)
+        self.assertFalse(p.edge_weight_decay_hw)
+        self.assertEqual(p.max_edges_per_event, 0)
+
+    def test_graph_rank_bumps_ltm_omega(self) -> None:
+        """graph_rank 파라미터를 켜면 LTM ω가 높아진다 (기존 점수 불변 기준)."""
+        from memory_chip_readiness.ltm_search_accel import assess_ltm_search
+
+        base = assess_ltm_search(LTMSearchAccelProfile(
+            similarity_engine_type="cosine", top_k_hw=True,
+            external_storage_interface=True, search_latency_target_ns=100,
+        ))
+        with_graph = assess_ltm_search(LTMSearchAccelProfile(
+            similarity_engine_type="cosine", top_k_hw=True,
+            external_storage_interface=True, search_latency_target_ns=100,
+            graph_rank_support=True, adjacency_store_kb=128,
+            rank_propagation_hw=True, graph_search_latency_ns=200,
+        ))
+        self.assertGreater(with_graph.omega, base.omega)
+
+    def test_graph_rank_evidence_key_present(self) -> None:
+        from memory_chip_readiness.ltm_search_accel import assess_ltm_search
+
+        r = assess_ltm_search(LTMSearchAccelProfile())
+        self.assertIn("graph_rank_score", r.evidence)
+
+    def test_association_edge_bumps_consolidation_omega(self) -> None:
+        """association_edge_log를 켜면 consolidation ω가 높아진다."""
+        from memory_chip_readiness.consolidation_scheduler import assess_consolidation
+
+        base = assess_consolidation(ConsolidationSchedulerProfile(
+            eligibility_fsm=True, dma_controller=True,
+            strength_threshold_hw=True, merge_arbiter=True,
+        ))
+        with_edge = assess_consolidation(ConsolidationSchedulerProfile(
+            eligibility_fsm=True, dma_controller=True,
+            strength_threshold_hw=True, merge_arbiter=True,
+            association_edge_log=True, edge_weight_decay_hw=True,
+            max_edges_per_event=8,
+        ))
+        self.assertGreater(with_edge.omega, base.omega)
+
+    def test_association_edge_evidence_key_present(self) -> None:
+        from memory_chip_readiness.consolidation_scheduler import assess_consolidation
+
+        r = assess_consolidation(ConsolidationSchedulerProfile())
+        self.assertIn("association_edge_score", r.evidence)
+
+    def test_omega_bounded_with_graph_rank(self) -> None:
+        """graph_rank 포함 최대 파라미터에서도 ω ≤ 1.0."""
+        from memory_chip_readiness.ltm_search_accel import assess_ltm_search
+
+        r = assess_ltm_search(LTMSearchAccelProfile(
+            similarity_engine_type="cosine", top_k_hw=True,
+            cam_lookup_support=True, external_storage_interface=True,
+            episodic_log_engine=True, index_cache_kb=512,
+            fixed_point_precision="int8", search_latency_target_ns=50,
+            rtl_coverage_pct=100.0,
+            graph_rank_support=True, adjacency_store_kb=512,
+            rank_propagation_hw=True, graph_search_latency_ns=50,
+        ))
+        self.assertLessEqual(r.omega, 1.0)
+        self.assertGreaterEqual(r.omega, 0.0)
+
+    def test_robot_preset_has_graph_rank(self) -> None:
+        """Robot_Memory_SoC 프리셋이 graph_rank를 포함하고 ω가 높아졌다."""
+        from memory_chip_readiness.presets import analyze_preset
+
+        r = analyze_preset("Robot_Memory_SoC")
+        ltm_detail = next(
+            (d for d in r.layer_details if d.layer == "ltm_search_accel"), None
+        )
+        self.assertIsNotNone(ltm_detail)
+        assert ltm_detail is not None
+        self.assertIn("graph_rank_score", ltm_detail.evidence)
+        self.assertGreater(ltm_detail.evidence["graph_rank_score"], 0.0)
+
+    def test_brain_spec_target_association_edge(self) -> None:
+        """Brain_Spec_Target 프리셋이 association_edge_log를 포함한다."""
+        from memory_chip_readiness.presets import analyze_preset
+
+        r = analyze_preset("Brain_Spec_Target")
+        consol_detail = next(
+            (d for d in r.layer_details if d.layer == "consolidation_scheduler"), None
+        )
+        self.assertIsNotNone(consol_detail)
+        assert consol_detail is not None
+        self.assertIn("association_edge_score", consol_detail.evidence)
+        self.assertGreater(consol_detail.evidence["association_edge_score"], 0.0)
 
 
 if __name__ == "__main__":

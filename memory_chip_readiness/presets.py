@@ -98,12 +98,17 @@ _register(
         external_storage_interface=True, episodic_log_engine=True,
         fixed_point_precision="int8", index_cache_kb=64,
         search_latency_target_ns=200, rtl_coverage_pct=45.0,
+        # graph_rank: 설계 방향 기록 (concept 수준)
+        graph_rank_support=True, adjacency_store_kb=64,
+        graph_search_latency_ns=500,
     ),
     consolidation=ConsolidationSchedulerProfile(
         eligibility_fsm=True, dma_controller=True,
         strength_threshold_hw=True, merge_arbiter=True,
         interrupt_driven=True, max_consolidation_per_cycle=2,
         pipeline_stages=3, rtl_coverage_pct=40.0,
+        # association_edge_log: graph_rank 엣지 소스 기록 방향 설정
+        association_edge_log=True, max_edges_per_event=4,
     ),
     physical=PhysicalMemoryProfile(
         stm_tech=MemoryTech.sram, ltm_tech=MemoryTech.nand_flash,
@@ -149,6 +154,8 @@ _register(
         cam_lookup_support=True, fixed_point_precision="fp16",
         index_cache_kb=256, search_latency_target_ns=80,
         rtl_coverage_pct=60.0,
+        graph_rank_support=True, adjacency_store_kb=256,
+        rank_propagation_hw=True, graph_search_latency_ns=200,
     ),
     consolidation=ConsolidationSchedulerProfile(
         eligibility_fsm=True, dma_controller=True,
@@ -156,6 +163,8 @@ _register(
         merge_arbiter=True, interrupt_driven=True,
         max_consolidation_per_cycle=4, pipeline_stages=5,
         power_gating_support=True, rtl_coverage_pct=55.0,
+        association_edge_log=True, edge_weight_decay_hw=True,
+        max_edges_per_event=8,
     ),
     physical=PhysicalMemoryProfile(
         stm_tech=MemoryTech.sram, ltm_tech=MemoryTech.mram,
@@ -587,12 +596,16 @@ _register(
         max_wells=8192,
         external_storage_interface=True,
         rtl_coverage_pct=0.0,
+        # graph_rank 방향 명세 (specification 단계 목표)
+        graph_rank_support=True, adjacency_store_kb=128,
+        graph_search_latency_ns=400,
     ),
     consolidation=ConsolidationSchedulerProfile(
         eligibility_fsm=True,
         dma_controller=True,
         merge_arbiter=True,
         rtl_coverage_pct=0.0,
+        association_edge_log=True, max_edges_per_event=4,
     ),
     physical=PhysicalMemoryProfile(
         stm_tech=MemoryTech.sram,
