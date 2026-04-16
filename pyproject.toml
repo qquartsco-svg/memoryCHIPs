@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "memory-chip-readiness"
@@ -9,7 +9,7 @@ description = "Memory Chip Readiness Foundation — STM/LTM/Consolidation 메모
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "GNJz / 00_BRAIN"}]
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 keywords = [
     "memory", "chip", "silicon", "readiness", "stm", "ltm",
     "consolidation", "asic", "fpga", "npu", "edge-ai",
